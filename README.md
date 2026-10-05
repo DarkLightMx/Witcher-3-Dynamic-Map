@@ -53,21 +53,23 @@ Copy `GameMod\mods\modMapSync` into the `mods` folder of the game and add `-debu
 dotnet build "Witcher 3 Dynamic Map.csproj" -c Release
 ```
 
-The repository does **not** contain the map tiles and the place icons (see "Assets" below); without them the app
-starts with an empty map and generic circle icons.
+The map tiles and the place icons live in the `Data` folder (see "Assets" below). Without them the app starts
+with an empty map and generic circle icons.
 
-`build-release.ps1` builds the release package (`publish\`: single-file self-contained exe, `Icons`, `Data\Maps`).
-It copies the tiles from `%LocalAppData%\Witcher3DynamicMap\Data\Maps`.
+`build-release.ps1` builds the release package (`publish\`: single-file self-contained exe, `Data\Icons`,
+`Data\Maps`). The icons are copied by the build itself; the tiles are taken from the project's `Data\Maps` (or from
+`%LocalAppData%\Witcher3DynamicMap\Data\Maps`).
 
-### Assets (not in the repository)
+### Assets (`Data` folder)
 
-The app looks for them next to the exe, then in the parent folders (up to four levels) and finally in
-`%LocalAppData%\Witcher3DynamicMap\Data`. A `Data` folder is used only if it contains tiles.
+The app looks for `Data` next to the exe, then in the parent folders (up to four levels) and finally in
+`%LocalAppData%\Witcher3DynamicMap\Data`. Icons are taken from the first `Data\Icons` that has images; tiles are
+looked up in every `Data\Maps` that has any, so a leftover folder with an old tile set does not hide the right one.
 
 - **Map tiles**: `Data\Maps\<world>\<zoom>\<x>\<y>.png`, TMS order (row 0 at the bottom), made with
   `gdal2tiles.py -p raster`. World folders: `hos_velen`, `skellige`, `kaer_morhen`, `toussaint`, `white_orchard`.
   They are available from [witcher3map-maps](https://github.com/witcher3map/witcher3map-maps).
-- **Icons**: PNG files in an `Icons` folder next to the exe, named like in the witcher3map icon set
+- **Icons**: PNG files in `Data\Icons`, named like in the witcher3map icon set
   (`signpost.png`, `boat.png`, ...). The mapping from game pin types to file names is `PoiIcons.Files` in
   [Form1.cs](Form1.cs). The set is in `files/images/icons` of [witcher3map](https://github.com/root-BB/witcher3map).
 

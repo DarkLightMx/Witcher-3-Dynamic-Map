@@ -104,7 +104,6 @@ public static class Loc
         ["poi.BossAndTreasure"] = ("Guarded treasures", "Охраняемые сокровища"),
         ["poi.MonsterNest"] = ("Monster nests", "Гнёзда монстров"),
         ["poi.Entrance"] = ("Entrances", "Входы"),
-        ["poi.Teleport"] = ("Teleports", "Порталы"),
         ["poi.NoticeBoard"] = ("Notice boards", "Доски объявлений"),
         ["poi.Whetstone"] = ("Whetstones", "Точильные камни"),
         ["poi.ArmorRepairTable"] = ("Repair tables", "Столы починки"),
@@ -125,7 +124,6 @@ public static class Loc
         ["poi.RescuingTown"] = ("Villages in need", "Спасение поселений"),
         ["poi.DungeonCrawl"] = ("Dungeons", "Подземелья"),
         ["poi.MagicLamp"] = ("Magic lamps", "Волшебные лампы"),
-        ["poi.Rift"] = ("Rifts", "Разломы"),
         ["poi.PlayerStash"] = ("Stashes", "Тайники"),
     };
 }

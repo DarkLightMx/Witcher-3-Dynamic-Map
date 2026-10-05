@@ -22,5 +22,5 @@ SOFTWARE.
 
 Third-party material: this license covers the source code and the game mod in
 this repository only. It does not cover The Witcher 3 assets of CD PROJEKT RED
-or the place icons and map tiles of the witcher3map projects (see README.md),
-which are not part of this repository and keep their own terms.
+or the place icons and map tiles of the witcher3map projects (the contents of
+the Data folder, see README.md), which keep their own terms.

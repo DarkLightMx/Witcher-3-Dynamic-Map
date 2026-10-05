@@ -20,6 +20,9 @@ public sealed record GamePin(string Type, double X, double Y, double Z, bool Dis
 public sealed class GameSync
 {
     private const string Marker = "@@MS|";
+
+    // Pin types that are not shown at all (neither on the map nor in the list or the counters).
+    private static readonly HashSet<string> IgnoredTypes = new(StringComparer.OrdinalIgnoreCase) { "Teleport", "Rift" };
     private const long MaxInitialRead = 8 * 1024 * 1024;
 
     public static string LogPath { get; } = Path.Combine(
@@ -126,7 +129,8 @@ public sealed class GameSync
             case "P" when pending is not null && f.Length >= 7:
                 if (double.TryParse(f[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) &&
                     double.TryParse(f[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var y) &&
-                    double.TryParse(f[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var z))
+                    double.TryParse(f[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var z) &&
+                    !IgnoredTypes.Contains(f[1]))
                     pending.Add(new GamePin(f[1], x, y, z, f[5] == "1", f[6] == "1"));
                 return false;
 

@@ -744,8 +744,8 @@ public sealed class MapControl : Control
 }
 
 /// <summary>
-/// POI icons. A PNG named like the POI type (e.g. roadsign.png) in
-/// %LocalAppData%\Witcher3DynamicMap\Data\Icons is used when present;
+/// POI icons. A PNG from the Data\Icons folder (see DataInstaller.IconDirectory), named like the POI type or
+/// like the entry in Files (e.g. signpost.png), is used when present;
 /// otherwise a built-in icon is rendered once and cached.
 /// </summary>
 public sealed class PoiIcons : IDisposable
@@ -772,10 +772,8 @@ public sealed class PoiIcons : IDisposable
         ["herbalist"] = "\u273F",
         ["alchemytable"] = "\u2697",
         ["boat"] = "\u26f5",
-        ["teleport"] = "\u21af",
         ["whetstone"] = "\u2736",
         ["magiclamp"] = "\u2600",
-        ["rift"] = "\u2748",
         ["banditcampfire"] = "\u2694",
         ["dungeoncrawl"] = "\u2302",
         ["spoilsofwar"] = "\u2691",
@@ -784,7 +782,7 @@ public sealed class PoiIcons : IDisposable
         ["armorrepairtable"] = "\u2692",
     };
 
-    // Game pin type (also the lowercase types of the static POI database) -> file name in the Icons folder
+    // Game pin type -> file name in the Data\Icons folder
     // (the icon set of the witcher3map project). Types without a match use the generic "poi" icon.
     private static readonly Dictionary<string, string> Files = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -796,7 +794,6 @@ public sealed class PoiIcons : IDisposable
         ["BossAndTreasure"] = "guarded",
         ["MonsterNest"] = "monsternest",
         ["Entrance"] = "entrance",
-        ["Teleport"] = "fasttravel",
         ["NoticeBoard"] = "notice",
         ["Whetstone"] = "grindstone",
         ["ArmorRepairTable"] = "armourerstable",
@@ -817,7 +814,6 @@ public sealed class PoiIcons : IDisposable
         ["RescuingTown"] = "abandoned",
         ["DungeonCrawl"] = "monsterden",
         ["MagicLamp"] = "poi",
-        ["Rift"] = "poi",
         ["PlayerStash"] = "poi",
         ["ChapterQuest"] = "quest",
         ["StoryQuest"] = "quest",
@@ -837,7 +833,7 @@ public sealed class PoiIcons : IDisposable
         return bmp;
     }
 
-    /// <summary>The icon from the Icons folder, or null when there is no file for this type.</summary>
+    /// <summary>The icon from the Data\Icons folder, or null when there is no file for this type.</summary>
     public Bitmap? GetOrNull(string type)
     {
         if (fileCache.TryGetValue(type, out var bmp)) return bmp;
@@ -915,10 +911,8 @@ public sealed class PoiIcons : IDisposable
         "herbalist" => Color.Green,
         "alchemytable" => Color.MediumSeaGreen,
         "boat" => Color.CornflowerBlue,
-        "teleport" => Color.Violet,
         "whetstone" or "armorrepairtable" => Color.Silver,
         "magiclamp" => Color.Khaki,
-        "rift" => Color.MediumOrchid,
         "banditcampfire" => Color.OrangeRed,
         "dungeoncrawl" => Color.BurlyWood,
         "spoilsofwar" => Color.Orange,
@@ -1142,10 +1136,14 @@ public sealed class TileMap : IDisposable
     private string? GetRoot(MapWorld w)
     {
         if (roots.TryGetValue(w.TileFolder, out var cached)) return cached;
-        var baseDir = DataInstaller.MapDirectory;
+        // A world's tiles are looked up in every Data\Maps folder that has tiles, so a leftover folder with
+        // an old or partial tile set does not hide the complete one.
         string? dir = null;
-        if (Directory.Exists(baseDir))
+        foreach (var baseDir in DataInstaller.MapDirectories)
+        {
             dir = Directory.EnumerateDirectories(baseDir, w.TileFolder, SearchOption.AllDirectories).FirstOrDefault();
+            if (dir is not null) break;
+        }
         roots[w.TileFolder] = dir;
         return dir;
     }
@@ -1216,32 +1214,31 @@ public sealed class MapWorld
 
 public static class DataInstaller
 {
-    // The map tiles are shipped with the app: Data\Maps next to the exe. A "Data" folder counts only if it
-    // really contains tiles (an empty folder is skipped). Candidates, in order:
+    // The map tiles (Data\Maps) and the place icons (Data\Icons) are shipped with the app. A folder counts only
+    // if it really contains image files (an empty folder is skipped). Candidates for "Data", in order:
     //   1. Data next to the exe (the release package)
     //   2. Data in the parent folders, up to 4 levels (running from bin\Release\... inside the project folder)
     //   3. %LocalAppData%\Witcher3DynamicMap\Data (developer machine)
-    public static string BaseDirectory { get; } = ResolveBaseDirectory();
-    public static string MapDirectory => Path.Combine(BaseDirectory, "Maps");
-    public static string IconDirectory => Path.Combine(AppContext.BaseDirectory, "Icons");
+    // Icons come from the first candidate that has them; tiles are searched in all candidates that have any.
+    public static IReadOnlyList<string> MapDirectories { get; } = Candidates("Maps").Where(ContainsImages).ToList();
+    public static string MapDirectory => MapDirectories.Count > 0 ? MapDirectories[0] : Candidates("Maps")[0];
+    public static string IconDirectory { get; } = Candidates("Icons").FirstOrDefault(ContainsImages) ?? Candidates("Icons")[0];
 
-    private static string ResolveBaseDirectory()
+    private static List<string> Candidates(string subfolder)
     {
         var candidates = new List<string>();
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null && candidates.Count < 5; dir = dir.Parent)
-            candidates.Add(Path.Combine(dir.FullName, "Data"));
-        candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Witcher3DynamicMap", "Data"));
-
-        foreach (var c in candidates)
-            if (ContainsTiles(Path.Combine(c, "Maps"))) return c;
-        return candidates[0]; // nothing found: the "tiles not found" message names this folder
+            candidates.Add(Path.Combine(dir.FullName, "Data", subfolder));
+        candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Witcher3DynamicMap", "Data", subfolder));
+        return candidates;
     }
 
-    private static bool ContainsTiles(string mapDir)
-        => Directory.Exists(mapDir) &&
-           Directory.EnumerateFiles(mapDir, "*.*", SearchOption.AllDirectories)
+    private static bool ContainsImages(string dir)
+        => Directory.Exists(dir) &&
+           Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
                     .Any(f => f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
                               f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase));
 
-    public static bool HasTiles() => ContainsTiles(MapDirectory);
+    public static bool HasTiles() => MapDirectories.Count > 0;
 }
