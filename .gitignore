@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+publish/
+*.zip
+*.7z
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Game assets that belong to CD PROJEKT RED / come from the witcher3map project:
+# map tiles (~650 MB) and place icons. They are shipped in the release package, not in the repository.
+
